@@ -4,18 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kit/kit/log"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"io/ioutil"
 	"lyrid-sd/adapter"
+	"lyrid-sd/api"
+	"lyrid-sd/manager"
+	"lyrid-sd/route"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -116,6 +117,8 @@ func (d *discovery) GetMetricFamilies() []*dto.MetricFamily {
 
 func main() {
 
+	manager.GetInstance().Init()
+
 	ctx := context.Background()
 	// NOTE: create an instance of your new SD implementation here.
 	cfg := sdConfig{
@@ -134,15 +137,22 @@ func main() {
 	sdAdapter := adapter.NewAdapter(ctx, "custom_sd.json", "exampleSD", disc, logger)
 	sdAdapter.Run()
 
-	g := prometheus.Gatherers{
-		prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) { return disc.GetMetricFamilies(), nil }),
+	for i := 9001; i <= 9005; i++ {
+		r := route.Router{}
+		r.Initialize(strconv.Itoa(i))
+		go r.Run()
+		manager.GetInstance().RouteMap[r.Port] = &r
 	}
+	//g := prometheus.Gatherers{
+	//	prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) { return disc.GetMetricFamilies(), nil }),
+	//}
 
 	router := gin.Default()
-	router.Use(ginprom.PromMiddleware(nil))
-	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
-
-	go router.Run(":8082")
+	//	router.Use(ginprom.PromMiddleware(nil))
+	//	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
+	router.POST("/stop/:id", api.Stop)
+	router.POST("/start/:id", api.Start)
+	go router.Run(":9000")
 
 	<-ctx.Done()
 }
