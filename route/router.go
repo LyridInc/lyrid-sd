@@ -1,20 +1,34 @@
 package route
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	dto "github.com/prometheus/client_model/go"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
-func ExporterStatus(c *gin.Context) {
-	fmt.Println(c.Request.Host)
+var (
+	packetPrefix = model.MetaLabelPrefix + "lyrid_"
+)
+
+func labelName(postfix string) string {
+	return packetPrefix + postfix
 }
 
-func Hello(c *gin.Context) {
-	c.String(200, "Hello from: "+c.Request.Host)
+func ExporterStatus(c *gin.Context) {
+	fmt.Println(c.Request.Host)
 }
 
 type Router struct {
@@ -32,8 +46,54 @@ func CreateNewRouter(port string) Router {
 	}
 }
 
-func (r *Router) getMetricFamily(p int) {
+func (r *Router) GetTarget() *targetgroup.Group {
 
+	return &targetgroup.Group{
+		Source: fmt.Sprintf("lyrid/%s", r.ID),
+		Targets: []model.LabelSet{
+			model.LabelSet{
+				model.AddressLabel: model.LabelValue(os.Getenv("DISCOVERY_INTERFACE") + ":" + r.Port),
+			},
+		},
+		Labels: model.LabelSet{
+			model.LabelName(labelName("tags")): model.LabelValue("sample_tag"),
+			model.LabelName(labelName("id")):   model.LabelValue(r.ID),
+		},
+	}
+}
+
+func (r *Router) getMetricFamily() []*dto.MetricFamily {
+	metrics := make([]*dto.MetricFamily, 0)
+	// todo: Change to lyrid-sdk later
+	url := "http://localhost:8080"
+
+	request := make(map[string]interface{})
+	request["Command"] = "GetScrapeResult"
+	exporter := make(map[string]interface{})
+	exporter["ID"] = r.ID
+	request["Exporter"] = exporter
+
+	jsonreq, _ := json.Marshal(request)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonreq))
+	req.Header.Add("content-type", "application/json")
+
+	response, _ := http.DefaultClient.Do(req)
+
+	body, _ := ioutil.ReadAll(response.Body)
+	defer response.Body.Close()
+
+	var jsonresp map[string]interface{}
+
+	json.Unmarshal(body, &jsonresp)
+
+	if jsonresp["ReturnPayload"] != nil {
+		raw := jsonresp["ReturnPayload"].(string)
+		var decoded_json []*dto.MetricFamily
+		json.Unmarshal([]byte(raw), &decoded_json)
+		metrics = decoded_json
+	}
+
+	return metrics
 }
 
 func (r *Router) GetPort() string {
@@ -50,11 +110,16 @@ func (r *Router) Initialize(p string) error {
 func (r *Router) Run() {
 	router := gin.Default()
 	//router.Use(ginprom.PromMiddleware(nil))
-	router.GET("/hello", Hello)
+	g := prometheus.Gatherers{
+		prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) { return r.getMetricFamily(), nil }),
+	}
+	router.Use(ginprom.PromMiddleware(nil))
+	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
 	router.GET("/status", ExporterStatus)
+	//router.GET("/metrics", ExporterStatus)
 
 	r.server = &http.Server{
-		Addr:    ":" + r.Port,
+		Addr:    os.Getenv("BIND_ADDRESS") + ":" + r.Port,
 		Handler: router,
 	}
 
