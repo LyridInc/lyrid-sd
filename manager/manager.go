@@ -89,6 +89,7 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonreq))
 	req.Header.Add("content-type", "application/json")
 	response, err := http.DefaultClient.Do(req)
+	log.Println(response);
 	if err != nil {
 		return exporter_list
 	}

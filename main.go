@@ -11,7 +11,9 @@ import (
 	"lyrid-sd/adapter"
 	"lyrid-sd/api"
 	"lyrid-sd/manager"
+	lyridmodel "lyrid-sd/model"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -85,8 +87,14 @@ func main() {
 	//	router.Use(ginprom.PromMiddleware(nil))
 	//	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
 	router.GET("/status", api.GetStatus)
-	go router.Run(os.Getenv("BIND_ADDRESS") + ":" + os.Getenv("MGNT_PORT"))
-
+	router.POST("/config", api.UpdateConfig)
+	router.GET("/config", api.GetConfig)
+	config, err := lyridmodel.GetConfig()
+	if (err == nil) {
+		go router.Run(config.Bind_Address + ":" + strconv.Itoa(config.Mngt_Port))
+	} else {
+		fmt.Println("err: ", err)
+	}
 	<-ctx.Done()
 }
 

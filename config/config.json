@@ -1,0 +1,8 @@
+{
+ "Bind_Address": "127.0.0.1",
+ "Mngt_Port": 8000,
+ "Discovery_Port_Start": 9001,
+ "Max_Discovery": 1024,
+ "Discovery_Poll_Interval": "15s",
+ "Discovery_Interface": "127.0.0.1"
+}
