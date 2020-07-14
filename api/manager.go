@@ -6,6 +6,8 @@ import (
 	"github.com/tkanos/gonfig"
 	"io/ioutil"
 	"lyrid-sd/model"
+	"os"
+	"syscall"
 )
 
 func GetStatus(c *gin.Context) {
@@ -25,6 +27,7 @@ func UpdateConfig(c *gin.Context) {
 		f, _ := json.MarshalIndent(configuration, "", " ")
 		_ = ioutil.WriteFile("config/config.json", f, 0644)
 		c.JSON(200, configuration)
+		syscall.Kill(os.Getpid(), syscall.SIGUSR1)
 	} else {
 		c.JSON(400, err)
 	}

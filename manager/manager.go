@@ -10,7 +10,6 @@ import (
 	"lyrid-sd/model"
 	"lyrid-sd/route"
 	"net/http"
-	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -34,12 +33,14 @@ func GetInstance() *NodeManager {
 
 func (manager *NodeManager) Init() {
 	manager.RouteMap = make(map[string]model.Router)
-	manager.StartPort, _ = strconv.Atoi(os.Getenv("DISCOVERY_PORT_START"))
+	config, _ := model.GetConfig()
+	manager.StartPort = config.Discovery_Port_Start
 	manager.NextPortAvailable = manager.StartPort
 }
 
 func (manager *NodeManager) Run(ctx context.Context) {
-	duration, _ := time.ParseDuration(os.Getenv("DISCOVERY_POLL_INTERVAL"))
+	config, _ := model.GetConfig()
+	duration, _ := time.ParseDuration(config.Discovery_Poll_Interval)
 	for c := time.Tick(duration); ; {
 
 		log.Println("Polling Lyrid For new Info")
@@ -89,7 +90,6 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonreq))
 	req.Header.Add("content-type", "application/json")
 	response, err := http.DefaultClient.Do(req)
-	log.Println(response);
 	if err != nil {
 		return exporter_list
 	}

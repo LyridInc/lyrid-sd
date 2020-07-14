@@ -14,8 +14,8 @@ import (
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"io/ioutil"
 	"log"
+	lyridmodel "lyrid-sd/model"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -47,12 +47,12 @@ func CreateNewRouter(port string) Router {
 }
 
 func (r *Router) GetTarget() *targetgroup.Group {
-
+	config, _ := lyridmodel.GetConfig()
 	return &targetgroup.Group{
 		Source: fmt.Sprintf("lyrid/%s", r.ID),
 		Targets: []model.LabelSet{
 			model.LabelSet{
-				model.AddressLabel: model.LabelValue(os.Getenv("DISCOVERY_INTERFACE") + ":" + r.Port),
+				model.AddressLabel: model.LabelValue(config.Discovery_Interface + ":" + r.Port),
 			},
 		},
 		Labels: model.LabelSet{
@@ -117,9 +117,9 @@ func (r *Router) Run() {
 	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
 	router.GET("/status", ExporterStatus)
 	//router.GET("/metrics", ExporterStatus)
-
+	config, _ := lyridmodel.GetConfig()
 	r.server = &http.Server{
-		Addr:    os.Getenv("BIND_ADDRESS") + ":" + r.Port,
+		Addr:    config.Bind_Address + ":" + r.Port,
 		Handler: router,
 	}
 
