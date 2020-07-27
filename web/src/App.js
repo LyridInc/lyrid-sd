@@ -9,7 +9,11 @@ const App = () => {
     Discovery_Port_Start: 	9001,
     Max_Discovery: 			1024,
     Discovery_Poll_Interval: 	"10s",
-    Discovery_Interface: 		"127.0.0.1"
+    Discovery_Interface: 		"127.0.0.1",
+    Lyrid_Key:                  "",
+    Lyrid_Secret:               "",
+    Local_Serverless_Url:       "http://localhost:8080",
+    Is_Local:                   true
   }
   const [configuration, setConfiguration] = useState(initialState)
   
@@ -35,6 +39,10 @@ const App = () => {
   const handleInputChange = (event) => {
     const { name, value } = event.target
     setConfiguration({ ...configuration, [name]: value })
+  }
+  
+  const toggleLocal = () => {
+    setConfiguration({ ...configuration, ["Is_Local"]: !configuration.Is_Local })
   }
   
   useEffect(() => {
@@ -102,6 +110,39 @@ const App = () => {
         value={configuration.Discovery_Interface}
         onChange={handleInputChange}
       />
+      <label>Is Local</label>
+      <label className="switch">
+        <input type="checkbox" checked={configuration.Is_Local} onChange={toggleLocal} />
+        <div className="slider"></div>
+      </label>
+      { !configuration.Is_Local ? (
+      <div>
+      <label>Lyrid Key</label>
+      <input
+        type="text"
+        name="Lyrid_Key"
+        value={configuration.Lyrid_Key}
+        onChange={handleInputChange}
+      />
+      <label>Lyrid Secret</label>
+      <input
+        type="text"
+        name="Lyrid_Secret"
+        value={configuration.Lyrid_Secret}
+        onChange={handleInputChange}
+      />
+      </div>
+      ) : (
+      <div>
+      <label>Local_Serverless_Url</label>
+      <input
+        type="text"
+        name="Local_Serverless_Url"
+        value={configuration.Local_Serverless_Url}
+        onChange={handleInputChange}
+      />
+      </div>
+      )}
       <button>Save</button>
       </form>
     </div>

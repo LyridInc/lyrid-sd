@@ -1,15 +1,14 @@
 package manager
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"github.com/LyridInc/go-sdk"
 	"log"
 	"lyrid-sd/model"
 	"lyrid-sd/route"
-	"net/http"
+	"lyrid-sd/utils"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -77,8 +76,12 @@ func (manager *NodeManager) Add(r model.Router) {
 }
 
 func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
-	// todo: Change to lyrid-sdk later
-
+	exporter_list := make([]model.ExporterEndpoint, 0)
+	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
+	log.Println("response: ",string(response))
+	var jsonresp map[string]interface{}
+	json.Unmarshal([]byte(response), &jsonresp)
+	/*
 	exporter_list := make([]model.ExporterEndpoint, 0)
 	url := "http://localhost:8080"
 
@@ -100,6 +103,8 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	var jsonresp map[string]interface{}
 
 	json.Unmarshal(body, &jsonresp)
+
+	 */
 
 	if jsonresp["ReturnPayload"] != nil {
 		exporters_raw := jsonresp["ReturnPayload"].([]interface{})

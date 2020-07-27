@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/fvbock/endless"
+	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kit/kit/log"
@@ -16,7 +16,6 @@ import (
 	lyridmodel "lyrid-sd/model"
 	"os"
 	"strconv"
-	"syscall"
 	"time"
 )
 
@@ -51,9 +50,12 @@ func NewDiscovery(conf SDConfig) (*Discovery, error) {
 	return cd, nil
 }
 
-func Init(){
-	godotenv.Load()
+func main() {
 
+	godotenv.Load()
+	if os.Getenv("GIN_MODE") == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	ctx := context.Background()
 	// NOTE: create an instance of your new SD implementation here.
 	cfg := SDConfig{
@@ -75,11 +77,6 @@ func Init(){
 	manager.GetInstance().Init()
 
 	go manager.GetInstance().Run(context.Background())
-}
-
-func main() {
-
-	Init()
 	//for i := 9001; i <= 9005; i++ {
 	//	r := route.Router{}
 	//	r.Initialize(strconv.Itoa(i))
@@ -98,15 +95,13 @@ func main() {
 	router.GET("/config", api.GetConfig)
 	router.Use(static.Serve("/", static.LocalFile("./web/build", true)))
 	config, _ := lyridmodel.GetConfig()
-	//go router.Run(config.Bind_Address + ":" + strconv.Itoa(config.Mngt_Port))
-	srv  := endless.NewServer(config.Bind_Address + ":" + strconv.Itoa(config.Mngt_Port), router)
-	srv.SignalHooks[endless.PRE_SIGNAL][syscall.SIGUSR1] = append(
-		srv.SignalHooks[endless.PRE_SIGNAL][syscall.SIGUSR1],
-		Init)
-
-	if err := srv.ListenAndServe(); err != nil {
-			panic(err)
+	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
+		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
+		if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
+			sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
 		}
+	}
+	router.Run(":" + strconv.Itoa(config.Mngt_Port))
 }
 
 // Note: you must implement this function for your discovery implementation as part of the

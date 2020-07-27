@@ -9,6 +9,10 @@ type Configuration struct {
 	Max_Discovery			int
 	Discovery_Poll_Interval	string
 	Discovery_Interface		string
+	Lyrid_Key				string
+	Lyrid_Secret			string
+	Local_Serverless_Url	string
+	Is_Local				bool
 }
 
 func GetConfig() (Configuration, error) {
