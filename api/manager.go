@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/tkanos/gonfig"
 	"io/ioutil"
+	"lyrid-sd/manager"
 	"lyrid-sd/model"
 )
 
@@ -17,12 +18,9 @@ func UpdateConfig(c *gin.Context) {
 	var request model.Configuration
 	if err := c.ShouldBindJSON(&request); err == nil {
 		configuration := model.Configuration{}
-		configuration.Bind_Address = request.Bind_Address
-		configuration.Discovery_Interface = request.Discovery_Interface
 		configuration.Discovery_Poll_Interval = request.Discovery_Poll_Interval
 		configuration.Discovery_Port_Start = request.Discovery_Port_Start
 		configuration.Max_Discovery = request.Max_Discovery
-		configuration.Mngt_Port = request.Mngt_Port
 		configuration.Lyrid_Key = request.Lyrid_Key
 		configuration.Lyrid_Secret = request.Lyrid_Secret
 		configuration.Local_Serverless_Url = request.Local_Serverless_Url
@@ -32,8 +30,12 @@ func UpdateConfig(c *gin.Context) {
 		} else {
 			sdk.GetInstance().DisableSimulate()
 		}
+		config, _ := model.GetConfig()
 		f, _ := json.MarshalIndent(configuration, "", " ")
 		_ = ioutil.WriteFile("config/config.json", f, 0644)
+		if config.Discovery_Port_Start !=  configuration.Discovery_Port_Start {
+			manager.GetInstance().ReRoute()
+		}
 		c.JSON(200, configuration)
 	} else {
 		c.JSON(400, err)

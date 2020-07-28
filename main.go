@@ -15,7 +15,6 @@ import (
 	"lyrid-sd/manager"
 	lyridmodel "lyrid-sd/model"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -101,7 +100,7 @@ func main() {
 			sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
 		}
 	}
-	router.Run(":" + strconv.Itoa(config.Mngt_Port))
+	router.Run(":" + os.Getenv("MGNT_PORT"))
 }
 
 // Note: you must implement this function for your discovery implementation as part of the

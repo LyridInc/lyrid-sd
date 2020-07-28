@@ -1,10 +1,10 @@
 package route
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/LyridInc/go-sdk"
 	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,10 +12,11 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
-	"io/ioutil"
 	"log"
-	lyridmodel "lyrid-sd/model"
+	sdmodel "lyrid-sd/model"
+	"lyrid-sd/utils"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -47,12 +48,11 @@ func CreateNewRouter(port string) Router {
 }
 
 func (r *Router) GetTarget() *targetgroup.Group {
-	config, _ := lyridmodel.GetConfig()
 	return &targetgroup.Group{
 		Source: fmt.Sprintf("lyrid/%s", r.ID),
 		Targets: []model.LabelSet{
 			model.LabelSet{
-				model.AddressLabel: model.LabelValue(config.Discovery_Interface + ":" + r.Port),
+				model.AddressLabel: model.LabelValue(os.Getenv("DISCOVERY_INTERFACE") + ":" + r.Port),
 			},
 		},
 		Labels: model.LabelSet{
@@ -64,7 +64,10 @@ func (r *Router) GetTarget() *targetgroup.Group {
 
 func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
-	// todo: Change to lyrid-sdk later
+	expoter := sdmodel.ExporterEndpoint{ID: r.ID}
+	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: expoter}))
+	log.Println("response: ",string(response))
+	/*
 	url := "http://localhost:8080"
 
 	request := make(map[string]interface{})
@@ -85,7 +88,9 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	var jsonresp map[string]interface{}
 
 	json.Unmarshal(body, &jsonresp)
-
+	 */
+	var jsonresp map[string]interface{}
+	json.Unmarshal([]byte(response), &jsonresp)
 	if jsonresp["ReturnPayload"] != nil {
 		raw := jsonresp["ReturnPayload"].(string)
 		var decoded_json []*dto.MetricFamily
@@ -117,9 +122,8 @@ func (r *Router) Run() {
 	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
 	router.GET("/status", ExporterStatus)
 	//router.GET("/metrics", ExporterStatus)
-	config, _ := lyridmodel.GetConfig()
 	r.server = &http.Server{
-		Addr:    config.Bind_Address + ":" + r.Port,
+		Addr:    os.Getenv("BIND_ADDRESS") + ":" + r.Port,
 		Handler: router,
 	}
 

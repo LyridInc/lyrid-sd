@@ -37,6 +37,19 @@ func (manager *NodeManager) Init() {
 	manager.NextPortAvailable = manager.StartPort
 }
 
+func (manager *NodeManager) ReRoute() {
+	// Close created route
+	log.Println("Re route")
+	for _, r  := range manager.RouteMap {
+		r.Close()
+		r = nil
+	}
+	manager.RouteMap = make(map[string]model.Router)
+	config, _ := model.GetConfig()
+	manager.StartPort = config.Discovery_Port_Start
+	manager.NextPortAvailable = manager.StartPort
+}
+
 func (manager *NodeManager) Run(ctx context.Context) {
 	config, _ := model.GetConfig()
 	duration, _ := time.ParseDuration(config.Discovery_Poll_Interval)
