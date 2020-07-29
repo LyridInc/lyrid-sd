@@ -1,0 +1,9 @@
+{
+ "Discovery_Port_Start": 9001,
+ "Max_Discovery": 1024,
+ "Discovery_Poll_Interval": "15s",
+ "Lyrid_Key": "Nty5l8pUOHSsd7pmZFCM",
+ "Lyrid_Secret": "Iq0Iy90HVflDaVNPOj8zGaeOxKnmtBvcmzj3KWEdpBmjq8yT1I",
+ "Local_Serverless_Url": "http://localhost:8080",
+ "Is_Local": false
+}

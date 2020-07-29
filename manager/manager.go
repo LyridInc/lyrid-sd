@@ -1,15 +1,13 @@
 package manager
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
+	"github.com/LyridInc/go-sdk"
 	"log"
 	"lyrid-sd/model"
 	"lyrid-sd/route"
-	"net/http"
+	"lyrid-sd/utils"
 	"os"
 	"strconv"
 	"sync"
@@ -34,12 +32,27 @@ func GetInstance() *NodeManager {
 
 func (manager *NodeManager) Init() {
 	manager.RouteMap = make(map[string]model.Router)
-	manager.StartPort, _ = strconv.Atoi(os.Getenv("DISCOVERY_PORT_START"))
+	config, _ := model.GetConfig()
+	manager.StartPort = config.Discovery_Port_Start
+	manager.NextPortAvailable = manager.StartPort
+}
+
+func (manager *NodeManager) ReRoute() {
+	// Close created route
+	log.Println("Re route")
+	for _, r  := range manager.RouteMap {
+		r.Close()
+		r = nil
+	}
+	manager.RouteMap = make(map[string]model.Router)
+	config, _ := model.GetConfig()
+	manager.StartPort = config.Discovery_Port_Start
 	manager.NextPortAvailable = manager.StartPort
 }
 
 func (manager *NodeManager) Run(ctx context.Context) {
-	duration, _ := time.ParseDuration(os.Getenv("DISCOVERY_POLL_INTERVAL"))
+	config, _ := model.GetConfig()
+	duration, _ := time.ParseDuration(config.Discovery_Poll_Interval)
 	for c := time.Tick(duration); ; {
 
 		log.Println("Polling Lyrid For new Info")
@@ -76,8 +89,12 @@ func (manager *NodeManager) Add(r model.Router) {
 }
 
 func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
-	// todo: Change to lyrid-sdk later
-
+	exporter_list := make([]model.ExporterEndpoint, 0)
+	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
+	log.Println("response: ",string(response))
+	var jsonresp map[string]interface{}
+	json.Unmarshal([]byte(response), &jsonresp)
+	/*
 	exporter_list := make([]model.ExporterEndpoint, 0)
 	url := "http://localhost:8080"
 
@@ -99,6 +116,8 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	var jsonresp map[string]interface{}
 
 	json.Unmarshal(body, &jsonresp)
+
+	 */
 
 	if jsonresp["ReturnPayload"] != nil {
 		exporters_raw := jsonresp["ReturnPayload"].([]interface{})

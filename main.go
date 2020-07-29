@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/LyridInc/go-sdk"
+	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kit/kit/log"
 	"github.com/joho/godotenv"
@@ -11,6 +13,7 @@ import (
 	"lyrid-sd/adapter"
 	"lyrid-sd/api"
 	"lyrid-sd/manager"
+	lyridmodel "lyrid-sd/model"
 	"os"
 	"time"
 )
@@ -47,8 +50,11 @@ func NewDiscovery(conf SDConfig) (*Discovery, error) {
 }
 
 func main() {
-	godotenv.Load()
 
+	godotenv.Load()
+	if os.Getenv("GIN_MODE") == "release" {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	ctx := context.Background()
 	// NOTE: create an instance of your new SD implementation here.
 	cfg := SDConfig{
@@ -70,7 +76,6 @@ func main() {
 	manager.GetInstance().Init()
 
 	go manager.GetInstance().Run(context.Background())
-
 	//for i := 9001; i <= 9005; i++ {
 	//	r := route.Router{}
 	//	r.Initialize(strconv.Itoa(i))
@@ -85,9 +90,17 @@ func main() {
 	//	router.Use(ginprom.PromMiddleware(nil))
 	//	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
 	router.GET("/status", api.GetStatus)
-	go router.Run(os.Getenv("BIND_ADDRESS") + ":" + os.Getenv("MGNT_PORT"))
-
-	<-ctx.Done()
+	router.POST("/config", api.UpdateConfig)
+	router.GET("/config", api.GetConfig)
+	router.Use(static.Serve("/", static.LocalFile("./web/build", true)))
+	config, _ := lyridmodel.GetConfig()
+	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
+		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
+		if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
+			sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
+		}
+	}
+	router.Run(":" + os.Getenv("MGNT_PORT"))
 }
 
 // Note: you must implement this function for your discovery implementation as part of the
