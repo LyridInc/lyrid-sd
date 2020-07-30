@@ -15,6 +15,6 @@ RUN apk add --no-cache ca-certificates bash
 WORKDIR /lyrid-sd/
 COPY --from=0 /go/src/lyrid-sd/app .
 COPY --from=0 /go/src/lyrid-sd/.env .
-COPY --from=0 /go/src/lyrid-sd/config ./config
+COPY --from=0 /go/src/lyrid-sd/config/config.json ./config/config.json
 COPY --from=0 /go/src/lyrid-sd/web/build ./web/build
 ENTRYPOINT ["/lyrid-sd/app"]
