@@ -4,14 +4,29 @@ import (
 	"encoding/json"
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/gin"
-	"github.com/tkanos/gonfig"
 	"io/ioutil"
 	"lyrid-sd/manager"
 	"lyrid-sd/model"
+	"os"
 )
 
 func GetStatus(c *gin.Context) {
 
+}
+
+func CheckLyridConnection(c *gin.Context) {
+	config := model.GetConfig()
+	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
+		user := sdk.GetInstance().GetUserProfile()
+		if user != nil {
+			account := sdk.GetInstance().GetAccountProfile()
+			c.JSON(200, account)
+		} else {
+			c.JSON(200, map[string]string{"status": "OK"})
+		}
+	} else {
+		c.JSON(200, map[string]string{"status": "ERROR"})
+	}
 }
 
 func UpdateConfig(c *gin.Context) {
@@ -30,9 +45,9 @@ func UpdateConfig(c *gin.Context) {
 		} else {
 			sdk.GetInstance().DisableSimulate()
 		}
-		config, _ := model.GetConfig()
+		config := model.GetConfig()
 		f, _ := json.MarshalIndent(configuration, "", " ")
-		_ = ioutil.WriteFile("config/config.json", f, 0644)
+		_ = ioutil.WriteFile(os.Getenv("CONFIG_DIR") + "/config.json", f, 0644)
 		if config.Discovery_Port_Start !=  configuration.Discovery_Port_Start {
 			manager.GetInstance().ReRoute()
 		}
@@ -43,11 +58,13 @@ func UpdateConfig(c *gin.Context) {
 }
 
 func GetConfig(c *gin.Context) {
-	configuration := model.Configuration{}
-	err := gonfig.GetConf("config/config.json", &configuration)
-	if (err == nil) {
-		c.JSON(200, configuration)
-	} else {
-		c.JSON(400, err)
+	configuration := model.GetConfig()
+	c.JSON(200, configuration)
+}
+
+func GetExporter(c *gin.Context) {
+	for _, r := range manager.GetInstance().RouteMap {
+		r.SetMetricEndpoint()
 	}
+	c.JSON(200, manager.GetInstance().RouteMap)
 }
