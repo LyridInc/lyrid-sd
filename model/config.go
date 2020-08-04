@@ -1,6 +1,11 @@
 package model
 
-import "github.com/tkanos/gonfig"
+import (
+	"encoding/json"
+	"github.com/tkanos/gonfig"
+	"io/ioutil"
+	"os"
+)
 
 type Configuration struct {
 	Discovery_Port_Start	int
@@ -12,9 +17,27 @@ type Configuration struct {
 	Is_Local				bool
 }
 
-func GetConfig() (Configuration, error) {
+func GetConfig() (Configuration) {
+	filePath := os.Getenv("CONFIG_DIR")+"/config.json"
 	configuration := Configuration{}
-	err := gonfig.GetConf("config/config.json", &configuration)
-	return configuration, err
+	err := gonfig.GetConf(filePath, &configuration)
+	if err != nil {
+		configuration = Configuration{
+			Discovery_Port_Start:    9001,
+			Max_Discovery:           1024,
+			Discovery_Poll_Interval: "15s",
+			Lyrid_Key:               "",
+			Lyrid_Secret:            "",
+			Local_Serverless_Url:    "http://localhost:8080",
+			Is_Local:                true,
+		}
+		f, _ := json.MarshalIndent(configuration, "", " ")
+		_ = os.Mkdir(os.Getenv("CONFIG_DIR"), 0755)
+
+		//file, er := os.Create(filePath)
+		//file.Close()
+		ioutil.WriteFile(filePath, f, 0644)
+	}
+	return configuration
 }
 

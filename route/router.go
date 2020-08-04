@@ -24,7 +24,7 @@ var (
 	packetPrefix = model.MetaLabelPrefix + "lyrid_"
 )
 
-func labelName(postfix string) string {
+func LabelName(postfix string) string {
 	return packetPrefix + postfix
 }
 
@@ -36,8 +36,8 @@ type Router struct {
 	ID   string
 	Port string
 
-	metricendpoint string
-
+	MetricEndpoint string
+	URL string
 	server *http.Server
 }
 
@@ -56,16 +56,17 @@ func (r *Router) GetTarget() *targetgroup.Group {
 			},
 		},
 		Labels: model.LabelSet{
-			model.LabelName(labelName("tags")): model.LabelValue("sample_tag"),
-			model.LabelName(labelName("id")):   model.LabelValue(r.ID),
+			model.LabelName(LabelName("tags")): model.LabelValue("sample_tag"),
+			model.LabelName(LabelName("id")):   model.LabelValue(r.ID),
+			model.LabelName(LabelName("port")):   model.LabelValue(r.Port),
 		},
 	}
 }
 
 func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
-	expoter := sdmodel.ExporterEndpoint{ID: r.ID}
-	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: expoter}))
+	exporter := sdmodel.ExporterEndpoint{ID: r.ID}
+	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
 	log.Println("response: ",string(response))
 	/*
 	url := "http://localhost:8080"
@@ -103,6 +104,10 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 
 func (r *Router) GetPort() string {
 	return r.Port
+}
+
+func (r *Router) SetMetricEndpoint() {
+	r.MetricEndpoint = r.server.Addr + "/metrics"
 }
 
 func (r *Router) Initialize(p string) error {

@@ -70,7 +70,7 @@ func main() {
 		fmt.Println("err: ", err)
 	}
 
-	sdAdapter := adapter.NewAdapter(ctx, "lyrid_sd.json", "lyridSD", disc, logger)
+	sdAdapter := adapter.NewAdapter(ctx, os.Getenv("CONFIG_DIR") + "/lyrid_sd.json", "lyridSD", disc, logger)
 	sdAdapter.Run()
 
 	manager.GetInstance().Init()
@@ -89,16 +89,17 @@ func main() {
 	router := gin.Default()
 	//	router.Use(ginprom.PromMiddleware(nil))
 	//	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
-	router.GET("/status", api.GetStatus)
+	router.GET("/status", api.CheckLyridConnection)
 	router.POST("/config", api.UpdateConfig)
 	router.GET("/config", api.GetConfig)
+	router.GET("/exporters", api.GetExporter)
 	router.Use(static.Serve("/", static.LocalFile("./web/build", true)))
-	config, _ := lyridmodel.GetConfig()
+	config := lyridmodel.GetConfig()
 	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
 		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
-		if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
-			sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
-		}
+	}
+	if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
+		sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
 	}
 	router.Run(":" + os.Getenv("MGNT_PORT"))
 }

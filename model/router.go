@@ -8,4 +8,5 @@ type Router interface {
 	GetTarget() *targetgroup.Group
 	Run()
 	Close()
+	SetMetricEndpoint()
 }

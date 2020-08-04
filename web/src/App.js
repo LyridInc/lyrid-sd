@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-
+import ExporterTable from './tables/ExporterTable'
 const App = () => {
 
   const ROOT_URL = '';
@@ -13,6 +13,10 @@ const App = () => {
     Is_Local:                   true
   }
   const [configuration, setConfiguration] = useState(initialState)
+  const [lyridConnection, setLyridConnection] = useState({"status":"Checking Lyrid account ..."})
+  const [time, setTime] = useState(Date.now())
+  const exportersData = []
+  const [exporters, setExporters] = useState(exportersData)
   
   const updateConfiguration = () => {
     const requestOptions = {
@@ -26,6 +30,8 @@ const App = () => {
       (result) => {
         console.log(result)
         setConfiguration(result)
+        setLyridConnection({"status":"Checking Lyrid account ..."})
+        checkLyridConnection()
       },
       (error) => {
         console.log(error)
@@ -46,6 +52,16 @@ const App = () => {
     setConfiguration({ ...configuration, ["Is_Local"]: !configuration.Is_Local })
   }
   
+  const checkLyridConnection = () => {
+    fetch(ROOT_URL+"/status")
+    .then((res) => {
+        if(!res.ok) { throw new Error(res.status) } else {return res.json()}
+    })
+    .then((result) => {
+        setLyridConnection({status: "Connected to Lyrid under accout name " + result[0].name + "."})
+    })
+  }
+  
   useEffect(() => {
     fetch(ROOT_URL+"/config")
     .then(res => res.json())
@@ -60,43 +76,50 @@ const App = () => {
     )
   }, [])
   
+  useEffect(() => {
+    const interval = setInterval(() => setTime(Date.now()), 60000)
+    
+    fetch(ROOT_URL+"/exporters")
+    .then((res) => {
+        if(!res.ok) { throw new Error(res.status) } else {return res.json()}
+    })
+    .then(
+      (result) => {
+        //console.log(result)
+        const keys = Object.keys(result)
+        let eps = [];
+        for (const key of keys) {
+          eps.push(result[key])
+        }
+        setExporters(eps)
+      },
+      (error) => {
+        console.log(error)
+      }
+    )
+    
+    checkLyridConnection()
+    
+    return () => {
+        clearInterval(interval);
+      }
+  }, [time])
   return (
     <div className="container">
       <h1>Lyrid Service Discovery Configuration</h1>
       <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        updateConfiguration()
-      }}
-    >
-      <label>Discovery Port Start</label>
-      <input
-        type="text"
-        name="Discovery_Port_Start"
-        value={configuration.Discovery_Port_Start}
-        onChange={handleInputChange}
-      />
-      <label>Max Discovery</label>
-      <input
-        type="text"
-        name="Max_Discovery"
-        value={configuration.Max_Discovery}
-        onChange={handleInputChange}
-      />
-      <label>Discovery Poll_Interval</label>
-      <input
-        type="text"
-        name="Discovery_Poll_Interval"
-        value={configuration.Discovery_Poll_Interval}
-        onChange={handleInputChange}
-      />
-      <label>Is Local</label>
+        onSubmit={(event) => {
+          event.preventDefault()
+          updateConfiguration()
+        }}
+      >
       <label className="switch">
         <input type="checkbox" checked={configuration.Is_Local} onChange={toggleLocal} />
         <div className="slider"></div>
       </label>
       { !configuration.Is_Local ? (
       <div>
+      <small>{lyridConnection.status}</small>
       <label>Lyrid Key</label>
       <input
         type="text"
@@ -123,8 +146,42 @@ const App = () => {
       />
       </div>
       )}
+      <label>Discovery Port Start</label>
+      <input
+        type="text"
+        name="Discovery_Port_Start"
+        value={configuration.Discovery_Port_Start}
+        onChange={handleInputChange}
+      />
+      <label>Max Discovery</label>
+      <input
+        type="text"
+        name="Max_Discovery"
+        value={configuration.Max_Discovery}
+        onChange={handleInputChange}
+      />
+      <label>Discovery Poll_Interval</label>
+      <input
+        type="text"
+        name="Discovery_Poll_Interval"
+        value={configuration.Discovery_Poll_Interval}
+        onChange={handleInputChange}
+      />
       <button>Save</button>
       </form>
+      
+      <div className="flex-large">
+        <h2>List exporters 
+          <button
+            onClick={() => setTime(Date.now())}
+            className="button muted-button"
+          >
+            Refresh
+          </button>
+        </h2>
+        <ExporterTable exporters={exporters}/>
+      </div>
+      
     </div>
   )
 }
