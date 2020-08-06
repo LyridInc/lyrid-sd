@@ -5,8 +5,10 @@ import (
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
+	"log"
 	"lyrid-sd/manager"
 	"lyrid-sd/model"
+	"lyrid-sd/utils"
 	"os"
 )
 
@@ -35,6 +37,7 @@ func UpdateConfig(c *gin.Context) {
 		configuration := model.Configuration{}
 		configuration.Discovery_Poll_Interval = request.Discovery_Poll_Interval
 		configuration.Discovery_Port_Start = request.Discovery_Port_Start
+		configuration.Scrape_Valid_Timeout = request.Scrape_Valid_Timeout
 		configuration.Max_Discovery = request.Max_Discovery
 		configuration.Lyrid_Key = request.Lyrid_Key
 		configuration.Lyrid_Secret = request.Lyrid_Secret
@@ -67,4 +70,39 @@ func GetExporter(c *gin.Context) {
 		r.SetMetricEndpoint()
 	}
 	c.JSON(200, manager.GetInstance().RouteMap)
+}
+
+func DeleteExporter(c *gin.Context) {
+	mgr := manager.GetInstance()
+	id := c.Param("id")
+	exporter := mgr.RouteMap[id]
+
+	if exporter == nil {
+		c.JSON(404, "exporter not found")
+		return
+	}
+	delete(mgr.RouteMap, id)
+	exp := model.ExporterEndpoint{ID:id}
+	sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp}))
+	exporter.Close()
+}
+
+func GetGateways(c *gin.Context) {
+	response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"}))
+	if err != nil {
+		log.Println("error: ",err)
+		c.JSON(404, "error on getting gateway")
+	}
+	var jsonresp map[string]interface{}
+	json.Unmarshal([]byte(response), &jsonresp)
+	if jsonresp["ReturnPayload"] != nil {
+		exporters_raw := jsonresp["ReturnPayload"].([]interface{})
+		c.JSON(200, exporters_raw)
+	}
+	//c.JSON(200, nil)
+}
+
+func DeleteGateway(c *gin.Context) {
+	id := c.Param("id")
+	sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}}))
 }

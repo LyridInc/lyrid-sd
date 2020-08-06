@@ -93,6 +93,9 @@ func main() {
 	router.POST("/config", api.UpdateConfig)
 	router.GET("/config", api.GetConfig)
 	router.GET("/exporters", api.GetExporter)
+	router.DELETE("/exporter/delete/:id", api.DeleteExporter)
+	router.GET("/gateways", api.GetGateways)
+	router.DELETE("/gateway/delete/:id", api.DeleteGateway)
 	router.Use(static.Serve("/", static.LocalFile("./web/build", true)))
 	config := lyridmodel.GetConfig()
 	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {

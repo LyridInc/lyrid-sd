@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import ExporterTable from './tables/ExporterTable'
+import GatewayTable from './tables/GatewayTable'
 const App = () => {
 
   const ROOT_URL = '';
@@ -7,6 +8,7 @@ const App = () => {
     Discovery_Port_Start: 	9001,
     Max_Discovery: 			1024,
     Discovery_Poll_Interval: 	"10s",
+    Scrape_Valid_Timeout:       "5m",
     Lyrid_Key:                  "",
     Lyrid_Secret:               "",
     Local_Serverless_Url:       "http://localhost:8080",
@@ -17,6 +19,7 @@ const App = () => {
   const [time, setTime] = useState(Date.now())
   const exportersData = []
   const [exporters, setExporters] = useState(exportersData)
+  const [gateways, setGateways] = useState([])
   
   const updateConfiguration = () => {
     const requestOptions = {
@@ -62,6 +65,22 @@ const App = () => {
     })
   }
   
+  const deleteExporter = (id) => {
+    const requestOptions = {
+      method: 'DELETE'
+    };
+    fetch(ROOT_URL+'/exporter/delete/'+id, requestOptions)
+    setExporters(exporters.filter((exporter) => exporter.ID !== id))
+  }
+  
+  const deleteGateway = (id) => {
+    const requestOptions = {
+      method: 'DELETE'
+    };
+    fetch(ROOT_URL+'/gateway/delete/'+id, requestOptions)
+    setGateways(gateways.filter((gateway) => gateway.ID !== id))
+  }
+  
   useEffect(() => {
     fetch(ROOT_URL+"/config")
     .then(res => res.json())
@@ -92,6 +111,19 @@ const App = () => {
           eps.push(result[key])
         }
         setExporters(eps)
+      },
+      (error) => {
+        console.log(error)
+      }
+    )
+    
+    fetch(ROOT_URL+"/gateways")
+    .then((res) => {
+        if(!res.ok) { throw new Error(res.status) } else {return res.json()}
+    })
+    .then(
+      (result) => {
+        setGateways(result)
       },
       (error) => {
         console.log(error)
@@ -167,8 +199,26 @@ const App = () => {
         value={configuration.Discovery_Poll_Interval}
         onChange={handleInputChange}
       />
+      <label>Scrape Result Valid Timeout</label>
+      <input
+        type="text"
+        name="Scrape_Valid_Timeout"
+        value={configuration.Scrape_Valid_Timeout}
+        onChange={handleInputChange}
+      />
       <button>Save</button>
       </form>
+      <div className="flex-large">
+        <h2>List gateways 
+          <button
+            onClick={() => setTime(Date.now())}
+            className="button muted-button"
+          >
+            Refresh
+          </button>
+        </h2>
+        <GatewayTable gateways={gateways} deleteGateway={deleteGateway}/>
+      </div>
       
       <div className="flex-large">
         <h2>List exporters 
@@ -179,7 +229,7 @@ const App = () => {
             Refresh
           </button>
         </h2>
-        <ExporterTable exporters={exporters}/>
+        <ExporterTable exporters={exporters} deleteExporter={deleteExporter}/>
       </div>
       
     </div>
