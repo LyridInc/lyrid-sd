@@ -8,6 +8,7 @@ const ExporterTable = (props) => (
         <th>Port</th>
         <th>Metric Endpoint</th>
         <th>Original Endpoint</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -18,6 +19,14 @@ const ExporterTable = (props) => (
             <td>{exporter.Port}</td>
             <td><a target="_blank" href={exporter.MetricEndpoint}>{exporter.MetricEndpoint}</a></td>
             <td>{exporter.URL}</td>
+            <td>
+              <button
+                onClick={() => props.deleteExporter(exporter.ID)}
+                className="button muted-button"
+              >
+                Delete
+              </button>
+            </td>
           </tr>
         ))
       ) : (

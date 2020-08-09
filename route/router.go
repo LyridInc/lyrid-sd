@@ -67,7 +67,7 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
 	exporter := sdmodel.ExporterEndpoint{ID: r.ID}
 	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
-	log.Println("response: ",string(response))
+	//log.Println("response: ",string(response))
 	/*
 	url := "http://localhost:8080"
 
@@ -90,13 +90,18 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 
 	json.Unmarshal(body, &jsonresp)
 	 */
-	var jsonresp map[string]interface{}
+	var jsonresp map[string]*sdmodel.ScrapesEndpointResult
 	json.Unmarshal([]byte(response), &jsonresp)
+
 	if jsonresp["ReturnPayload"] != nil {
-		raw := jsonresp["ReturnPayload"].(string)
-		var decoded_json []*dto.MetricFamily
-		json.Unmarshal([]byte(raw), &decoded_json)
-		metrics = decoded_json
+		scrapeResult := jsonresp["ReturnPayload"]
+		dur, _ := time.ParseDuration(sdmodel.GetConfig().Scrape_Valid_Timeout)
+		if time.Since(scrapeResult.ScrapeTime) <= dur {
+			raw := scrapeResult.ScrapeResult
+			var decoded_json []*dto.MetricFamily
+			json.Unmarshal([]byte(raw), &decoded_json)
+			metrics = decoded_json
+		}
 	}
 
 	return metrics
@@ -107,7 +112,7 @@ func (r *Router) GetPort() string {
 }
 
 func (r *Router) SetMetricEndpoint() {
-	r.MetricEndpoint = r.server.Addr + "/metrics"
+	r.MetricEndpoint = "http://" + r.server.Addr + "/metrics"
 }
 
 func (r *Router) Initialize(p string) error {

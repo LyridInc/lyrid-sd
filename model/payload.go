@@ -10,6 +10,7 @@ type LyFnInputParams struct {
 	Exporter    ExporterEndpoint
 	ScapeResult ScrapesEndpointResult
 	Payload     RequestParam
+	Gateway 	Gateway
 }
 
 // LyFnOutputParams a struct that will be returned
@@ -28,4 +29,10 @@ type ScrapesEndpointResult struct {
 
 type RequestParam struct {
 	ID string
+}
+
+type Gateway struct {
+	ID string
+	Status string
+	Hostname string
 }
