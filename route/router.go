@@ -37,8 +37,8 @@ type Router struct {
 	Port string
 
 	MetricEndpoint string
-	URL string
-	server *http.Server
+	URL            string
+	server         *http.Server
 }
 
 func CreateNewRouter(port string) Router {
@@ -58,7 +58,7 @@ func (r *Router) GetTarget() *targetgroup.Group {
 		Labels: model.LabelSet{
 			model.LabelName(LabelName("tags")): model.LabelValue("sample_tag"),
 			model.LabelName(LabelName("id")):   model.LabelValue(r.ID),
-			model.LabelName(LabelName("port")):   model.LabelValue(r.Port),
+			model.LabelName(LabelName("port")): model.LabelValue(r.Port),
 		},
 	}
 }
@@ -67,29 +67,6 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
 	exporter := sdmodel.ExporterEndpoint{ID: r.ID}
 	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
-	//log.Println("response: ",string(response))
-	/*
-	url := "http://localhost:8080"
-
-	request := make(map[string]interface{})
-	request["Command"] = "GetScrapeResult"
-	exporter := make(map[string]interface{})
-	exporter["ID"] = r.ID
-	request["Exporter"] = exporter
-
-	jsonreq, _ := json.Marshal(request)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonreq))
-	req.Header.Add("content-type", "application/json")
-
-	response, _ := http.DefaultClient.Do(req)
-
-	body, _ := ioutil.ReadAll(response.Body)
-	defer response.Body.Close()
-
-	var jsonresp map[string]interface{}
-
-	json.Unmarshal(body, &jsonresp)
-	 */
 	var jsonresp map[string]*sdmodel.ScrapesEndpointResult
 	json.Unmarshal([]byte(response), &jsonresp)
 
