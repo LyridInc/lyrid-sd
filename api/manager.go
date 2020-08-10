@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/gin"
-	"io/ioutil"
 	"log"
 	"lyrid-sd/manager"
 	"lyrid-sd/model"
@@ -49,8 +48,7 @@ func UpdateConfig(c *gin.Context) {
 			sdk.GetInstance().DisableSimulate()
 		}
 		config := model.GetConfig()
-		f, _ := json.MarshalIndent(configuration, "", " ")
-		_ = ioutil.WriteFile(os.Getenv("CONFIG_DIR") + "/config.json", f, 0644)
+		model.WriteConfig(configuration)
 		if config.Discovery_Port_Start !=  configuration.Discovery_Port_Start {
 			manager.GetInstance().ReRoute()
 		}

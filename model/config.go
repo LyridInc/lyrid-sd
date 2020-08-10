@@ -9,6 +9,7 @@ import (
 
 type Configuration struct {
 	Discovery_Port_Start	int
+	Discovery_Max_Port_Used int
 	Max_Discovery			int
 	Discovery_Poll_Interval	string
 	Scrape_Valid_Timeout 	string
@@ -25,6 +26,7 @@ func GetConfig() (Configuration) {
 	if err != nil {
 		configuration = Configuration{
 			Discovery_Port_Start:    8001,
+			Discovery_Max_Port_Used: 8001,
 			Max_Discovery:           1024,
 			Discovery_Poll_Interval: "15s",
 			Scrape_Valid_Timeout:    "5m",
@@ -33,16 +35,17 @@ func GetConfig() (Configuration) {
 			Local_Serverless_Url:    "http://localhost:8080",
 			Is_Local:                true,
 		}
-		f, _ := json.MarshalIndent(configuration, "", " ")
 		_ = os.Mkdir(os.Getenv("CONFIG_DIR"), 0755)
-
-		//file, er := os.Create(filePath)
-		//file.Close()
-		ioutil.WriteFile(filePath, f, 0644)
+		WriteConfig(configuration)
 	}
 	if len(configuration.Scrape_Valid_Timeout) == 0 {
 		configuration.Scrape_Valid_Timeout = "5m"
 	}
 	return configuration
+}
+
+func WriteConfig(config Configuration) {
+	f, _ := json.MarshalIndent(config, "", " ")
+	_ = ioutil.WriteFile(os.Getenv("CONFIG_DIR") + "/config.json", f, 0644)
 }
 
