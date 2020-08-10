@@ -11,10 +11,9 @@ RUN npm install
 RUN npm run build
 
 FROM alpine
-RUN apk add --no-cache ca-certificates bash
+RUN apk add --no-cache curl ca-certificates bash
 WORKDIR /lyrid-sd/
 COPY --from=0 /go/src/lyrid-sd/app .
 COPY --from=0 /go/src/lyrid-sd/.env .
-COPY --from=0 /go/src/lyrid-sd/config/config.json ./config/config.json
 COPY --from=0 /go/src/lyrid-sd/web/build ./web/build
 ENTRYPOINT ["/lyrid-sd/app"]
