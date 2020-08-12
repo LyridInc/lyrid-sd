@@ -1,17 +1,21 @@
 package route
 
 import (
+	"bytes"
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/LyridInc/go-sdk"
 	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
+	"github.com/pierrec/lz4"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
+	"io/ioutil"
 	"log"
 	sdmodel "lyrid-sd/model"
 	"lyrid-sd/utils"
@@ -74,9 +78,19 @@ func (r *Router) getMetricFamily() []*dto.MetricFamily {
 		scrapeResult := jsonresp["ReturnPayload"]
 		dur, _ := time.ParseDuration(sdmodel.GetConfig().Scrape_Valid_Timeout)
 		if time.Since(scrapeResult.ScrapeTime) <= dur {
-			raw := scrapeResult.ScrapeResult
+			raw := []byte(scrapeResult.ScrapeResult)
+			if scrapeResult.IsCompress {
+				decompressed_b64bytes, _ := b64.StdEncoding.DecodeString(scrapeResult.ScrapeResult)
+				r := lz4.NewReader(bytes.NewBuffer(decompressed_b64bytes))
+				var err error
+				raw, err = ioutil.ReadAll(r)
+				if err != nil {
+					fmt.Println(err)
+				}
+			}
+
 			var decoded_json []*dto.MetricFamily
-			json.Unmarshal([]byte(raw), &decoded_json)
+			json.Unmarshal(raw, &decoded_json)
 			metrics = decoded_json
 		}
 	}
