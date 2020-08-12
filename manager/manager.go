@@ -39,7 +39,11 @@ func GetInstance() *NodeManager {
 func (manager *NodeManager) Init() {
 	manager.RouteMap = make(map[string]model.Router)
 	config := model.GetConfig()
-	manager.StartPort = config.Discovery_Port_Start
+	if config.Discovery_Max_Port_Used > config.Discovery_Port_Start {
+		manager.StartPort = config.Discovery_Max_Port_Used
+	} else {
+		manager.StartPort = config.Discovery_Port_Start
+	}
 	manager.NextPortAvailable = manager.StartPort
 }
 
@@ -92,6 +96,7 @@ func (manager *NodeManager) Run(ctx context.Context) {
 			}
 		}
 		list := manager.GetExporterList()
+		config := model.GetConfig()
 		for _, endpoint := range list {
 			if manager.RouteMap[endpoint.ID] == nil {
 				// route to this id doesn't exist
@@ -101,6 +106,7 @@ func (manager *NodeManager) Run(ctx context.Context) {
 				if sd == nil {
 					r.Initialize(strconv.Itoa(manager.NextPortAvailable))
 					manager.NextPortAvailable++
+					config.Discovery_Max_Port_Used = manager.NextPortAvailable
 				} else {
 					port := getUsedPort(endpoint.ID, sd)
 					if port != 0 {
@@ -112,14 +118,18 @@ func (manager *NodeManager) Run(ctx context.Context) {
 						}
 						r.Initialize(strconv.Itoa(port))
 					}
+					if port > config.Discovery_Max_Port_Used {
+						config.Discovery_Max_Port_Used = port
+					} else {
+						config.Discovery_Max_Port_Used = manager.NextPortAvailable
+					}
 				}
 				go r.Run()
 				manager.RouteMap[endpoint.ID] = &r
 				// notify Discovery Engine to create target over in the in json file
-
 			}
 		}
-
+		model.WriteConfig(config)
 		select {
 		case <-c:
 			continue

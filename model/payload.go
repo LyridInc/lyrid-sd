@@ -22,7 +22,7 @@ type LyFnOutputParams struct {
 type ScrapesEndpointResult struct {
 	ExporterID   string
 	ScrapeResult string
-
+	IsCompress bool
 	ScrapeTime     time.Time
 	LastUpdateTime time.Time
 }

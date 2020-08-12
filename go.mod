@@ -9,6 +9,7 @@ require (
 	github.com/gin-gonic/gin v1.6.0
 	github.com/go-kit/kit v0.9.0
 	github.com/joho/godotenv v1.3.0
+	github.com/pierrec/lz4 v2.5.2+incompatible
 	github.com/prometheus/client_golang v1.2.0
 	github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4
 	github.com/prometheus/common v0.7.0
