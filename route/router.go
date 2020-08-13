@@ -43,6 +43,7 @@ type Router struct {
 	MetricEndpoint string
 	URL            string
 	server         *http.Server
+	AdditionalLabels map[string]string
 }
 
 func CreateNewRouter(port string) Router {
@@ -51,7 +52,17 @@ func CreateNewRouter(port string) Router {
 	}
 }
 
+func (r *Router) Update(endpoint *sdmodel.ExporterEndpoint) {
+	r.AdditionalLabels = endpoint.AdditionalLabels
+}
+
 func (r *Router) GetTarget() *targetgroup.Group {
+	labels := model.LabelSet{}
+	for key, value := range r.AdditionalLabels {
+		labels[model.LabelName(LabelName(key))] = model.LabelValue(value)
+	}
+	labels[model.LabelName(LabelName("id"))] = model.LabelValue(r.ID)
+	labels[model.LabelName(LabelName("port"))] = model.LabelValue(r.Port)
 	return &targetgroup.Group{
 		Source: fmt.Sprintf("lyrid/%s", r.ID),
 		Targets: []model.LabelSet{
@@ -59,11 +70,7 @@ func (r *Router) GetTarget() *targetgroup.Group {
 				model.AddressLabel: model.LabelValue(os.Getenv("DISCOVERY_INTERFACE") + ":" + r.Port),
 			},
 		},
-		Labels: model.LabelSet{
-			model.LabelName(LabelName("tags")): model.LabelValue("sample_tag"),
-			model.LabelName(LabelName("id")):   model.LabelValue(r.ID),
-			model.LabelName(LabelName("port")): model.LabelValue(r.Port),
-		},
+		Labels: labels,
 	}
 }
 

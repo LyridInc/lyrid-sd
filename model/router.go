@@ -1,6 +1,8 @@
 package model
 
-import "github.com/prometheus/prometheus/discovery/targetgroup"
+import (
+	"github.com/prometheus/prometheus/discovery/targetgroup"
+)
 
 type Router interface {
 	Initialize(p string) error
@@ -9,4 +11,5 @@ type Router interface {
 	Run()
 	Close()
 	SetMetricEndpoint()
+	Update(router *ExporterEndpoint)
 }
