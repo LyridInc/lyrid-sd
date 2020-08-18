@@ -5,4 +5,5 @@ type ExporterEndpoint struct {
 	Gateway      string
 	URL          string
 	ExporterType string
+	AdditionalLabels map[string]string `json:"additional_labels"`
 }

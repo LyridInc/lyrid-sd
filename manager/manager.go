@@ -102,7 +102,7 @@ func (manager *NodeManager) Run(ctx context.Context) {
 				// route to this id doesn't exist
 				log.Println("Route to ID doesn't exist: ", endpoint.ID)
 
-				r := route.Router{ID: endpoint.ID, URL: endpoint.URL}
+				r := route.Router{ID: endpoint.ID, URL: endpoint.URL, AdditionalLabels: endpoint.AdditionalLabels}
 				if sd == nil {
 					r.Initialize(strconv.Itoa(manager.NextPortAvailable))
 					manager.NextPortAvailable++
@@ -127,6 +127,9 @@ func (manager *NodeManager) Run(ctx context.Context) {
 				go r.Run()
 				manager.RouteMap[endpoint.ID] = &r
 				// notify Discovery Engine to create target over in the in json file
+			} else {
+				// update labels
+				manager.RouteMap[endpoint.ID].Update(&endpoint)
 			}
 		}
 		model.WriteConfig(config)
@@ -150,48 +153,11 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	if err != nil {
 		log.Println("error: ", err)
 	}
-	var jsonresp map[string]interface{}
+	var jsonresp map[string][]model.ExporterEndpoint
 	json.Unmarshal([]byte(response), &jsonresp)
-	/*
-		exporter_list := make([]model.ExporterEndpoint, 0)
-		url := "http://localhost:8080"
-
-		request := make(map[string]interface{})
-		request["Command"] = "ListExporter"
-
-		jsonreq, _ := json.Marshal(request)
-		fmt.Println()
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonreq))
-		req.Header.Add("content-type", "application/json")
-		response, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return exporter_list
-		}
-
-		body, _ := ioutil.ReadAll(response.Body)
-		defer response.Body.Close()
-
-		var jsonresp map[string]interface{}
-
-		json.Unmarshal(body, &jsonresp)
-
-	*/
-
 	if jsonresp["ReturnPayload"] != nil {
-		exporters_raw := jsonresp["ReturnPayload"].([]interface{})
-		for _, raw := range exporters_raw {
-			raw_iface := raw.(map[string]interface{})
-
-			exporter := model.ExporterEndpoint{
-				ID:           raw_iface["ID"].(string),
-				Gateway:      raw_iface["Gateway"].(string),
-				URL:          raw_iface["URL"].(string),
-				ExporterType: raw_iface["ExporterType"].(string),
-			}
-			exporter_list = append(exporter_list, exporter)
-		}
+		exporter_list = jsonresp["ReturnPayload"]
 	}
-
 	return exporter_list
 }
 
