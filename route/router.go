@@ -9,6 +9,7 @@ import (
 	"github.com/LyridInc/go-sdk"
 	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
+	"github.com/go-kit/kit/log/level"
 	"github.com/pierrec/lz4"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -16,7 +17,7 @@ import (
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"io/ioutil"
-	"log"
+	"lyrid-sd/logger"
 	sdmodel "lyrid-sd/model"
 	"lyrid-sd/utils"
 	"net/http"
@@ -139,7 +140,7 @@ func (r *Router) Run() {
 	// it won't block the graceful shutdown handling below
 	go func() {
 		if err := r.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			level.Error(logger.GetInstance().Logger).Log("Error", err)
 		}
 	}()
 
@@ -172,12 +173,11 @@ func (r *Router) Run() {
 }
 
 func (r *Router) Close() {
-	log.Println("Shutting down server at: " + r.Port)
-
+	level.Debug(logger.GetInstance().Logger).Log("Message", "Shutting down server", "Port", r.Port)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	defer r.server.Close()
 	defer r.server.Shutdown(ctx)
 	r.server = nil
-	log.Println("Server shut down at: " + r.Port)
+	level.Debug(logger.GetInstance().Logger).Log("Message", "Server shutted down", "Port", r.Port)
 }
