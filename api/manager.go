@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/gin"
-	"log"
+	"github.com/go-kit/kit/log/level"
+	"lyrid-sd/logger"
 	"lyrid-sd/manager"
 	"lyrid-sd/model"
 	"lyrid-sd/utils"
@@ -45,6 +46,7 @@ func UpdateConfig(c *gin.Context) {
 		if configuration.Is_Local && len(configuration.Local_Serverless_Url) > 0 {
 			sdk.GetInstance().SimulateServerless(configuration.Local_Serverless_Url)
 		} else {
+			sdk.GetInstance().Initialize(configuration.Lyrid_Key, configuration.Lyrid_Secret, )
 			sdk.GetInstance().DisableSimulate()
 		}
 		config := model.GetConfig()
@@ -88,7 +90,7 @@ func DeleteExporter(c *gin.Context) {
 func GetGateways(c *gin.Context) {
 	response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"}))
 	if err != nil {
-		log.Println("error: ",err)
+		level.Error(logger.GetInstance().Logger).Log("err", err)
 		c.JSON(404, "error on getting gateway")
 	}
 	var jsonresp map[string]interface{}

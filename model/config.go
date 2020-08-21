@@ -5,6 +5,7 @@ import (
 	"github.com/tkanos/gonfig"
 	"io/ioutil"
 	"os"
+	"time"
 )
 
 type Configuration struct {
@@ -45,7 +46,10 @@ func GetConfig() (Configuration) {
 }
 
 func WriteConfig(config Configuration) {
+	filePath := os.Getenv("CONFIG_DIR")+"/config.json"
+	backupFile := os.Getenv("CONFIG_DIR") + "/config.json.bak." + time.Now().UTC().String()
+	os.Rename(filePath, backupFile)
 	f, _ := json.MarshalIndent(config, "", " ")
-	_ = ioutil.WriteFile(os.Getenv("CONFIG_DIR") + "/config.json", f, 0644)
+	_ = ioutil.WriteFile(filePath, f, 0644)
 }
 

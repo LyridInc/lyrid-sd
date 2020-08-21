@@ -2,16 +2,16 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/contrib/static"
 	"github.com/gin-gonic/gin"
-	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/joho/godotenv"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"lyrid-sd/adapter"
 	"lyrid-sd/api"
+	"lyrid-sd/logger"
 	"lyrid-sd/manager"
 	lyridmodel "lyrid-sd/model"
 	"os"
@@ -19,7 +19,6 @@ import (
 )
 
 var (
-	logger       log.Logger
 	packetPrefix = model.MetaLabelPrefix + "lyrid_"
 )
 
@@ -62,15 +61,21 @@ func main() {
 		Address:         "localhost",
 		RefreshInterval: 30,
 	}
-	logger = log.NewSyncLogger(log.NewLogfmtLogger(os.Stdout))
-	logger = log.With(logger, "ts", log.DefaultTimestampUTC, "caller", log.DefaultCaller)
+	config := lyridmodel.GetConfig()
+	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
+		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
+	}
+	if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
+		sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
+	}
+	logger.GetInstance().Init()
 
 	disc, err := NewDiscovery(cfg)
 	if err != nil {
-		fmt.Println("err: ", err)
+		level.Error(logger.GetInstance().Logger).Log("err", err)
 	}
 
-	sdAdapter := adapter.NewAdapter(ctx, os.Getenv("CONFIG_DIR") + "/lyrid_sd.json", "lyridSD", disc, logger)
+	sdAdapter := adapter.NewAdapter(ctx, os.Getenv("CONFIG_DIR") + "/lyrid_sd.json", "lyridSD", disc, logger.GetInstance().Logger)
 	sdAdapter.Run()
 
 	manager.GetInstance().Init()
@@ -85,7 +90,6 @@ func main() {
 	//g := prometheus.Gatherers{
 	//	prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) { return disc.GetMetricFamilies(), nil }),
 	//}
-
 	router := gin.Default()
 	//	router.Use(ginprom.PromMiddleware(nil))
 	//	router.GET("/metrics", ginprom.PromHandler(promhttp.HandlerFor(g, promhttp.HandlerOpts{})))
@@ -97,13 +101,6 @@ func main() {
 	router.GET("/gateways", api.GetGateways)
 	router.DELETE("/gateway/delete/:id", api.DeleteGateway)
 	router.Use(static.Serve("/", static.LocalFile("./web/build", true)))
-	config := lyridmodel.GetConfig()
-	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
-		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
-	}
-	if config.Is_Local && len(config.Local_Serverless_Url) > 0 {
-		sdk.GetInstance().SimulateServerless(config.Local_Serverless_Url)
-	}
 	router.Run(":" + os.Getenv("MGNT_PORT"))
 }
 

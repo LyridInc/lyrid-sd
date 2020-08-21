@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/LyridInc/go-sdk"
+	"github.com/go-kit/kit/log/level"
 	"io/ioutil"
-	"log"
+	"lyrid-sd/logger"
 	"lyrid-sd/model"
 	"lyrid-sd/route"
 	"lyrid-sd/utils"
@@ -49,7 +50,7 @@ func (manager *NodeManager) Init() {
 
 func (manager *NodeManager) ReRoute() {
 	// Close created route
-	log.Println("Re route")
+	level.Info(logger.GetInstance().Logger).Log("Message", "Re reoute")
 	for _, r := range manager.RouteMap {
 		r.Close()
 		r = nil
@@ -97,16 +98,16 @@ func (manager *NodeManager) Run(ctx context.Context) {
 		}
 		list := manager.GetExporterList()
 		config := model.GetConfig()
+		maxPortused := config.Discovery_Max_Port_Used
 		for _, endpoint := range list {
 			if manager.RouteMap[endpoint.ID] == nil {
 				// route to this id doesn't exist
-				log.Println("Route to ID doesn't exist: ", endpoint.ID)
-
+				level.Info(logger.GetInstance().Logger).Log("Message", "Route to ID doesn't exist", "EndpointID", endpoint.ID)
 				r := route.Router{ID: endpoint.ID, URL: endpoint.URL, AdditionalLabels: endpoint.AdditionalLabels}
 				if sd == nil {
 					r.Initialize(strconv.Itoa(manager.NextPortAvailable))
 					manager.NextPortAvailable++
-					config.Discovery_Max_Port_Used = manager.NextPortAvailable
+					maxPortused = manager.NextPortAvailable
 				} else {
 					port := getUsedPort(endpoint.ID, sd)
 					if port != 0 {
@@ -118,10 +119,10 @@ func (manager *NodeManager) Run(ctx context.Context) {
 						}
 						r.Initialize(strconv.Itoa(port))
 					}
-					if port > config.Discovery_Max_Port_Used {
-						config.Discovery_Max_Port_Used = port
+					if port > maxPortused {
+						maxPortused = port
 					} else {
-						config.Discovery_Max_Port_Used = manager.NextPortAvailable
+						maxPortused = manager.NextPortAvailable
 					}
 				}
 				go r.Run()
@@ -132,7 +133,11 @@ func (manager *NodeManager) Run(ctx context.Context) {
 				manager.RouteMap[endpoint.ID].Update(&endpoint)
 			}
 		}
-		model.WriteConfig(config)
+		config = model.GetConfig()
+		if config.Discovery_Max_Port_Used < maxPortused {
+			config.Discovery_Max_Port_Used = maxPortused
+			model.WriteConfig(config)
+		}
 		select {
 		case <-c:
 			continue
@@ -151,7 +156,7 @@ func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	exporter_list := make([]model.ExporterEndpoint, 0)
 	response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
 	if err != nil {
-		log.Println("error: ", err)
+		level.Error(logger.GetInstance().Logger).Log("Error", err)
 	}
 	var jsonresp map[string][]model.ExporterEndpoint
 	json.Unmarshal([]byte(response), &jsonresp)
