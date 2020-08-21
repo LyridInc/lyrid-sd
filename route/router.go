@@ -173,11 +173,11 @@ func (r *Router) Run() {
 }
 
 func (r *Router) Close() {
-	level.Debug(logger.GetInstance().Logger).Log("Message", "Shutting down server", "Port", r.Port)
+	level.Info(logger.GetInstance().Logger).Log("Message", "Shutting down server", "Port", r.Port)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	defer r.server.Close()
 	defer r.server.Shutdown(ctx)
 	r.server = nil
-	level.Debug(logger.GetInstance().Logger).Log("Message", "Server shutted down", "Port", r.Port)
+	level.Info(logger.GetInstance().Logger).Log("Message", "Server shutted down", "Port", r.Port)
 }

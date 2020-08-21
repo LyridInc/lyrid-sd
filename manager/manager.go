@@ -50,7 +50,7 @@ func (manager *NodeManager) Init() {
 
 func (manager *NodeManager) ReRoute() {
 	// Close created route
-	level.Debug(logger.GetInstance().Logger).Log("Message", "Re reoute")
+	level.Info(logger.GetInstance().Logger).Log("Message", "Re reoute")
 	for _, r := range manager.RouteMap {
 		r.Close()
 		r = nil
@@ -102,7 +102,7 @@ func (manager *NodeManager) Run(ctx context.Context) {
 		for _, endpoint := range list {
 			if manager.RouteMap[endpoint.ID] == nil {
 				// route to this id doesn't exist
-				level.Debug(logger.GetInstance().Logger).Log("Message", "Route to ID doesn't exist", "EndpointID", endpoint.ID)
+				level.Info(logger.GetInstance().Logger).Log("Message", "Route to ID doesn't exist", "EndpointID", endpoint.ID)
 				r := route.Router{ID: endpoint.ID, URL: endpoint.URL, AdditionalLabels: endpoint.AdditionalLabels}
 				if sd == nil {
 					r.Initialize(strconv.Itoa(manager.NextPortAvailable))
