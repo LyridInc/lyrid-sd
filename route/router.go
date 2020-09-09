@@ -6,6 +6,11 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/LyridInc/go-sdk"
 	"github.com/chenjiandongx/ginprom"
 	"github.com/gin-gonic/gin"
@@ -16,13 +21,9 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/prometheus/discovery/targetgroup"
-	"io/ioutil"
 	"lyrid-sd/logger"
 	sdmodel "lyrid-sd/model"
 	"lyrid-sd/utils"
-	"net/http"
-	"os"
-	"time"
 )
 
 var (
@@ -78,7 +79,9 @@ func (r *Router) GetTarget() *targetgroup.Group {
 func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
 	exporter := sdmodel.ExporterEndpoint{ID: r.ID}
-	response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
+	body := utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter})
+	response, _ := sdk.GetInstance().ExecuteFunctionByName(sdmodel.GetConfig().Noc_App_Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), body)
+	//response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
 	var jsonresp map[string]*sdmodel.ScrapesEndpointResult
 	json.Unmarshal([]byte(response), &jsonresp)
 

@@ -96,6 +96,7 @@ func main() {
 	router.GET("/status", api.CheckLyridConnection)
 	router.POST("/config", api.UpdateConfig)
 	router.GET("/config", api.GetConfig)
+	router.GET("/apps", api.ListApps)
 	router.GET("/exporters", api.GetExporter)
 	router.DELETE("/exporter/delete/:id", api.DeleteExporter)
 	router.GET("/gateways", api.GetGateways)

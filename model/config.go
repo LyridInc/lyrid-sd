@@ -18,6 +18,7 @@ type Configuration struct {
 	Lyrid_Secret			string
 	Local_Serverless_Url	string
 	Is_Local				bool
+	Noc_App_Name			string
 }
 
 func GetConfig() (Configuration) {
@@ -35,6 +36,7 @@ func GetConfig() (Configuration) {
 			Lyrid_Secret:            "",
 			Local_Serverless_Url:    "http://localhost:8080",
 			Is_Local:                true,
+			Noc_App_Name:		     "",
 		}
 		_ = os.Mkdir(os.Getenv("CONFIG_DIR"), 0755)
 		WriteConfig(configuration)

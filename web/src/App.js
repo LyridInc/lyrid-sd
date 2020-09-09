@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import ExporterTable from './tables/ExporterTable'
 import GatewayTable from './tables/GatewayTable'
+import Select from 'react-select'
 const App = () => {
 
   const ROOT_URL = '';
@@ -12,7 +13,8 @@ const App = () => {
     Lyrid_Key:                  "",
     Lyrid_Secret:               "",
     Local_Serverless_Url:       "http://localhost:8080",
-    Is_Local:                   true
+    Is_Local:                   true,
+    Noc_App_Name:               ""
   }
   const [configuration, setConfiguration] = useState(initialState)
   const [lyridConnection, setLyridConnection] = useState({"status":"Checking Lyrid account ..."})
@@ -20,6 +22,14 @@ const App = () => {
   const exportersData = []
   const [exporters, setExporters] = useState(exportersData)
   const [gateways, setGateways] = useState([])
+  
+  const [apps, setApps] = useState([])
+  const options = [
+  { value: 'chocolate', label: 'Chocolate' },
+  { value: 'strawberry', label: 'Strawberry' },
+  { value: 'vanilla', label: 'Vanilla' }
+]
+ const [selectedApp, setSelectedApp] = useState({value: configuration.Noc_App_Name, label: configuration.Noc_App_Name})
   
   const updateConfiguration = () => {
     const requestOptions = {
@@ -51,6 +61,11 @@ const App = () => {
     }
   }
   
+  const handleAppSelect = (app) => {
+    setSelectedApp(app)
+    setConfiguration({ ...configuration, ["Noc_App_Name"]: app.value })
+  }
+  
   const toggleLocal = () => {
     setConfiguration({ ...configuration, ["Is_Local"]: !configuration.Is_Local })
   }
@@ -62,6 +77,22 @@ const App = () => {
     })
     .then((result) => {
         setLyridConnection({status: "Connected to Lyrid under accout name " + result[0].name + "."})
+        listApps()
+    })
+  }
+  
+  const listApps = () => {
+    fetch(ROOT_URL+"/apps")
+    .then((res) => {
+        if(!res.ok) { throw new Error(res.status) } else {return res.json()}
+    })
+    .then((result) => {
+        let apps = [];
+        result.forEach((element) => {
+          apps.push({ value: element, label: element })
+        })
+        setApps(apps)
+        console.log(apps)
     })
   }
   
@@ -88,6 +119,7 @@ const App = () => {
       (result) => {
         console.log(result)
         setConfiguration(result)
+        setSelectedApp({ value: result.Noc_App_Name, label: result.Noc_App_Name })
       },
       (error) => {
         console.log(error)
@@ -166,6 +198,8 @@ const App = () => {
         value={configuration.Lyrid_Secret}
         onChange={handleInputChange}
       />
+      <label>NOC App</label>
+      <Select options={apps} value={selectedApp} onChange={handleAppSelect}/>
       </div>
       ) : (
       <div>

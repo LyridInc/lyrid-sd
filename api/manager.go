@@ -10,6 +10,7 @@ import (
 	"lyrid-sd/model"
 	"lyrid-sd/utils"
 	"os"
+	"strings"
 )
 
 func GetStatus(c *gin.Context) {
@@ -31,6 +32,16 @@ func CheckLyridConnection(c *gin.Context) {
 	}
 }
 
+func ListApps(c *gin.Context) {
+	var apps []string
+	for _, app := range manager.GetInstance().Apps {
+		if strings.Contains(strings.ToLower(app.Name), strings.ToLower(os.Getenv("NOC_APP_NAME"))) {
+			apps = append(apps, app.Name)
+		}
+	}
+	c.JSON(200, apps)
+}
+
 func UpdateConfig(c *gin.Context) {
 	var request model.Configuration
 	if err := c.ShouldBindJSON(&request); err == nil {
@@ -43,11 +54,13 @@ func UpdateConfig(c *gin.Context) {
 		configuration.Lyrid_Secret = request.Lyrid_Secret
 		configuration.Local_Serverless_Url = request.Local_Serverless_Url
 		configuration.Is_Local = request.Is_Local
+		configuration.Noc_App_Name = request.Noc_App_Name
 		if configuration.Is_Local && len(configuration.Local_Serverless_Url) > 0 {
 			sdk.GetInstance().SimulateServerless(configuration.Local_Serverless_Url)
 		} else {
-			sdk.GetInstance().Initialize(configuration.Lyrid_Key, configuration.Lyrid_Secret, )
+			sdk.GetInstance().Initialize(configuration.Lyrid_Key, configuration.Lyrid_Secret)
 			sdk.GetInstance().DisableSimulate()
+			manager.GetInstance().Apps = sdk.GetInstance().GetApps()
 		}
 		config := model.GetConfig()
 		model.WriteConfig(configuration)
@@ -83,12 +96,16 @@ func DeleteExporter(c *gin.Context) {
 	}
 	delete(mgr.RouteMap, id)
 	exp := model.ExporterEndpoint{ID:id}
-	sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp}))
+	deleteExporterBody := utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp})
+	manager.GetInstance().ExecuteFunction(deleteExporterBody)
+	//sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp}))
 	exporter.Close()
 }
 
 func GetGateways(c *gin.Context) {
-	response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"}))
+	getGatewayBody := utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"})
+	response, err := manager.GetInstance().ExecuteFunction(getGatewayBody)
+	//response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"}))
 	if err != nil {
 		level.Error(logger.GetInstance().Logger).Log("err", err)
 		c.JSON(404, "error on getting gateway")
@@ -104,5 +121,7 @@ func GetGateways(c *gin.Context) {
 
 func DeleteGateway(c *gin.Context) {
 	id := c.Param("id")
-	sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}}))
+	deleteGatewayBody := utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}})
+	manager.GetInstance().ExecuteFunction(deleteGatewayBody)
+	//sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}}))
 }

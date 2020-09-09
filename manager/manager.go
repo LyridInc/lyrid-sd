@@ -3,23 +3,26 @@ package manager
 import (
 	"context"
 	"encoding/json"
-	"github.com/LyridInc/go-sdk"
-	"github.com/go-kit/kit/log/level"
 	"io/ioutil"
-	"lyrid-sd/logger"
-	"lyrid-sd/model"
-	"lyrid-sd/route"
-	"lyrid-sd/utils"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/LyridInc/go-sdk"
+	 sdkModel "github.com/LyridInc/go-sdk/model"
+	"github.com/go-kit/kit/log/level"
+	"lyrid-sd/logger"
+	"lyrid-sd/model"
+	"lyrid-sd/route"
+	"lyrid-sd/utils"
 )
 
 type NodeManager struct {
 	StartPort         int
 	NextPortAvailable int
 	RouteMap          map[string]model.Router
+	Apps	   []*sdkModel.App
 }
 
 type customSD struct {
@@ -46,6 +49,7 @@ func (manager *NodeManager) Init() {
 		manager.StartPort = config.Discovery_Port_Start
 	}
 	manager.NextPortAvailable = manager.StartPort
+	manager.Apps = sdk.GetInstance().GetApps()
 }
 
 func (manager *NodeManager) ReRoute() {
@@ -148,13 +152,21 @@ func (manager *NodeManager) Run(ctx context.Context) {
 	}
 }
 
+func (manager *NodeManager) ExecuteFunction(body string) ([]byte, error){
+	response, err := sdk.GetInstance().ExecuteFunctionByName(model.GetConfig().Noc_App_Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), body)
+	level.Debug(logger.GetInstance().Logger).Log("Response", response)
+	return response, err
+}
+
 func (manager *NodeManager) Add(r model.Router) {
 	manager.RouteMap[r.GetPort()] = r
 }
 
 func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	exporter_list := make([]model.ExporterEndpoint, 0)
-	response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
+	listExporterBody := utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"})
+	response, err := manager.ExecuteFunction(listExporterBody)
+	//response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
 	if err != nil {
 		level.Error(logger.GetInstance().Logger).Log("Error", err)
 	}
