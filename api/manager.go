@@ -20,9 +20,11 @@ func GetStatus(c *gin.Context) {
 func CheckLyridConnection(c *gin.Context) {
 	config := model.GetConfig()
 	if len(config.Lyrid_Key) > 0 && len(config.Lyrid_Secret) > 0 {
+		sdk.GetInstance().Initialize(config.Lyrid_Key, config.Lyrid_Secret)
 		user := sdk.GetInstance().GetUserProfile()
 		if user != nil {
 			account := sdk.GetInstance().GetAccountProfile()
+			manager.GetInstance().Apps = sdk.GetInstance().GetApps()
 			c.JSON(200, account)
 		} else {
 			c.JSON(200, map[string]string{"status": "OK"})
@@ -60,7 +62,6 @@ func UpdateConfig(c *gin.Context) {
 		} else {
 			sdk.GetInstance().Initialize(configuration.Lyrid_Key, configuration.Lyrid_Secret)
 			sdk.GetInstance().DisableSimulate()
-			manager.GetInstance().Apps = sdk.GetInstance().GetApps()
 		}
 		config := model.GetConfig()
 		model.WriteConfig(configuration)
