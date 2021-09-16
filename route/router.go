@@ -23,7 +23,6 @@ import (
 	"github.com/prometheus/prometheus/discovery/targetgroup"
 	"lyrid-sd/logger"
 	sdmodel "lyrid-sd/model"
-	"lyrid-sd/utils"
 )
 
 var (
@@ -42,9 +41,9 @@ type Router struct {
 	ID   string
 	Port string
 
-	MetricEndpoint string
-	URL            string
-	server         *http.Server
+	MetricEndpoint   string
+	URL              string
+	server           *http.Server
 	AdditionalLabels map[string]string
 }
 
@@ -79,14 +78,13 @@ func (r *Router) GetTarget() *targetgroup.Group {
 func (r *Router) getMetricFamily() []*dto.MetricFamily {
 	metrics := make([]*dto.MetricFamily, 0)
 	exporter := sdmodel.ExporterEndpoint{ID: r.ID}
-	body := utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter})
-	response, _ := sdk.GetInstance().ExecuteFunctionByName(sdmodel.GetConfig().Noc_App_Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), body)
-	//response, _ := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(sdmodel.LyFnInputParams{Command: "GetScrapeResult", Exporter: exporter}))
-	var jsonresp map[string]*sdmodel.ScrapesEndpointResult
-	json.Unmarshal([]byte(response), &jsonresp)
+	response, _ := sdk.GetInstance().ExecuteApp(sdmodel.GetConfig().Noc_App_Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), "/api/scrapes/"+exporter.ID, "GET", "")
 
-	if jsonresp["ReturnPayload"] != nil {
-		scrapeResult := jsonresp["ReturnPayload"]
+	var jsonresp *sdmodel.ScrapesEndpointResult
+	err := json.Unmarshal([]byte(response), &jsonresp)
+
+	if err == nil {
+		scrapeResult := jsonresp
 		dur, _ := time.ParseDuration(sdmodel.GetConfig().Scrape_Valid_Timeout)
 		if time.Since(scrapeResult.ScrapeTime) <= dur {
 			raw := []byte(scrapeResult.ScrapeResult)

@@ -2,13 +2,14 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/LyridInc/go-sdk"
 	"github.com/gin-gonic/gin"
 	"github.com/go-kit/kit/log/level"
 	"lyrid-sd/logger"
 	"lyrid-sd/manager"
 	"lyrid-sd/model"
-	"lyrid-sd/utils"
+	"net/http"
 	"os"
 	"strings"
 )
@@ -65,7 +66,7 @@ func UpdateConfig(c *gin.Context) {
 		}
 		config := model.GetConfig()
 		model.WriteConfig(configuration)
-		if config.Discovery_Port_Start !=  configuration.Discovery_Port_Start {
+		if config.Discovery_Port_Start != configuration.Discovery_Port_Start {
 			manager.GetInstance().ReRoute()
 		}
 		c.JSON(200, configuration)
@@ -96,33 +97,30 @@ func DeleteExporter(c *gin.Context) {
 		return
 	}
 	delete(mgr.RouteMap, id)
-	exp := model.ExporterEndpoint{ID:id}
-	deleteExporterBody := utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp})
-	manager.GetInstance().ExecuteFunction(deleteExporterBody)
+	manager.GetInstance().ExecuteFunctionWithURIAndMethod("DELETE", "/api/exporters/"+id, "")
 	//sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteExporter", Exporter: exp}))
 	exporter.Close()
 }
 
 func GetGateways(c *gin.Context) {
-	getGatewayBody := utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"})
-	response, err := manager.GetInstance().ExecuteFunction(getGatewayBody)
+	response, err := manager.GetInstance().ExecuteFunctionWithURIAndMethod("GET", "/api/gateways", "")
 	//response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListGateways"}))
 	if err != nil {
 		level.Error(logger.GetInstance().Logger).Log("err", err)
 		c.JSON(404, "error on getting gateway")
+		return
 	}
-	var jsonresp map[string]interface{}
-	json.Unmarshal([]byte(response), &jsonresp)
-	if jsonresp["ReturnPayload"] != nil {
-		exporters_raw := jsonresp["ReturnPayload"].([]interface{})
-		c.JSON(200, exporters_raw)
+	var jsonresp []model.Gateway
+	err = json.Unmarshal([]byte(response), &jsonresp)
+	if err == nil {
+		c.JSON(200, jsonresp)
+	} else {
+		c.JSON(http.StatusBadRequest, errors.New("unable to get gateway"))
 	}
-	//c.JSON(200, nil)
 }
 
 func DeleteGateway(c *gin.Context) {
 	id := c.Param("id")
-	deleteGatewayBody := utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}})
-	manager.GetInstance().ExecuteFunction(deleteGatewayBody)
+	manager.GetInstance().ExecuteFunctionWithURIAndMethod("DELETE", "/api/gateways/"+id, "")
 	//sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "DeleteGateway", Gateway: model.Gateway{ID: id}}))
 }

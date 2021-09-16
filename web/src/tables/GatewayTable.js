@@ -12,7 +12,7 @@ const GatewayTable = (props) => (
     <tbody>
       {props.gateways.length > 0 ? (
         props.gateways.map((gateway) => (
-          <tr key={gateway.id}>
+          <tr key={gateway.ID}>
             <td>{gateway.ID}</td>
             <td>{gateway.Hostname}</td>
             <td>

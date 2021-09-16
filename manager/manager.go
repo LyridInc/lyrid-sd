@@ -3,26 +3,27 @@ package manager
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/LyridInc/go-sdk"
-	 sdkModel "github.com/LyridInc/go-sdk/model"
+	sdkModel "github.com/LyridInc/go-sdk/model"
 	"github.com/go-kit/kit/log/level"
 	"lyrid-sd/logger"
 	"lyrid-sd/model"
 	"lyrid-sd/route"
-	"lyrid-sd/utils"
 )
 
 type NodeManager struct {
 	StartPort         int
 	NextPortAvailable int
 	RouteMap          map[string]model.Router
-	Apps	   []*sdkModel.App
+	Apps              []*sdkModel.App
 }
 
 type customSD struct {
@@ -152,10 +153,22 @@ func (manager *NodeManager) Run(ctx context.Context) {
 	}
 }
 
-func (manager *NodeManager) ExecuteFunction(body string) ([]byte, error){
+func (manager *NodeManager) ExecuteFunction(body string) ([]byte, error) {
 	response, err := sdk.GetInstance().ExecuteFunctionByName(model.GetConfig().Noc_App_Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), body)
 	level.Debug(logger.GetInstance().Logger).Log("Response", response)
 	return response, err
+}
+
+func (manager *NodeManager) ExecuteFunctionWithURIAndMethod(method string, uri string, body string) ([]byte, error) {
+	for _, app := range manager.Apps {
+		if strings.Contains(strings.ToLower(app.Name), strings.ToLower(os.Getenv("NOC_APP_NAME"))) {
+			level.Debug(logger.GetInstance().Logger).Log("App name", app.Name)
+			response, err := sdk.GetInstance().ExecuteApp(app.Name, os.Getenv("NOC_MODULE_NAME"), os.Getenv("NOC_TAG"), os.Getenv("NOC_FUNCTION_NAME"), uri, method, body)
+			level.Debug(logger.GetInstance().Logger).Log("Response", response)
+			return response, err
+		}
+	}
+	return nil, errors.New("unable to execute")
 }
 
 func (manager *NodeManager) Add(r model.Router) {
@@ -164,16 +177,14 @@ func (manager *NodeManager) Add(r model.Router) {
 
 func (manager *NodeManager) GetExporterList() []model.ExporterEndpoint {
 	exporter_list := make([]model.ExporterEndpoint, 0)
-	listExporterBody := utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"})
-	response, err := manager.ExecuteFunction(listExporterBody)
-	//response, err := sdk.GetInstance().ExecuteFunction(os.Getenv("FUNCTION_ID"), "LYR", utils.JsonEncode(model.LyFnInputParams{Command: "ListExporter"}))
+	response, err := manager.ExecuteFunctionWithURIAndMethod("GET", "/api/exporters", "")
 	if err != nil {
 		level.Error(logger.GetInstance().Logger).Log("Error", err)
 	}
-	var jsonresp map[string][]model.ExporterEndpoint
-	json.Unmarshal([]byte(response), &jsonresp)
-	if jsonresp["ReturnPayload"] != nil {
-		exporter_list = jsonresp["ReturnPayload"]
+	var jsonresp []model.ExporterEndpoint
+	err = json.Unmarshal([]byte(response), &jsonresp)
+	if err == nil {
+		exporter_list = jsonresp
 	}
 	return exporter_list
 }
