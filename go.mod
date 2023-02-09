@@ -7,7 +7,7 @@ require (
 	github.com/chenjiandongx/ginprom v0.0.0-20200410120253-7cfb22707fa6
 	github.com/frankban/quicktest v1.11.0 // indirect
 	github.com/gin-gonic/contrib v0.0.0-20200913005814-1c32036e7ea4
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/go-kit/kit v0.10.0
 	github.com/go-playground/validator/v10 v10.9.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
